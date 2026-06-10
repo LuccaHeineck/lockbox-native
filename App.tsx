@@ -1,52 +1,51 @@
-import React from 'react';
-import { StyleSheet, Text, View, StatusBar } from 'react-native';
+import 'react-native-url-polyfill/auto';
+import React, { useState, useEffect } from 'react';
+import { View, Text, FlatList } from 'react-native';
+import { supabase } from './src/utils/supabase';
 
 export default function App() {
+  // Mudança aqui: <any[]> impede o TS de quebrar o build
+  const [todos, setTodos] = useState<any[]>([]);
+
+  useEffect(() => {
+    const getTodos = async () => {
+      try {
+        console.log("Puxando dados do Supabase...");
+        const { data, error } = await supabase.from('todos').select();
+
+        if (error) {
+          console.error('Erro retornado pelo Supabase:', error.message);
+          return;
+        }
+
+        console.log("Dados brutos que chegaram do banco:", data);
+
+        if (data && data.length > 0) {
+          setTodos(data);
+        } else {
+          console.log("O banco respondeu com sucesso, mas veio um array VAZIO []");
+        }
+      } catch (error) {
+        console.error('Erro catastrófico no bloco catch:', error);
+      }
+    };
+
+    getTodos();
+  }, []);
+
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="light-content" />
-      
-      <View style={styles.card}>
-        <Text style={styles.title}>Teste inicial</Text>
-        <Text style={styles.subtitle}>
-          card de teste.
-        </Text>
-      </View>
+    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' }}>
+      <Text style={{ fontSize: 24, fontWeight: 'bold', marginBottom: 20 }}>Todo List</Text>
+      <FlatList
+        data={todos}
+        keyExtractor={(item) => item.id.toString()}
+        // Mudança aqui: definindo o item como tipo any
+        renderItem={({ item }: { item: any }) => (
+          <Text key={item.id} style={{ fontSize: 18, marginVertical: 4 }}>
+            {item.name}
+          </Text>
+        )}
+      />
     </View>
   );
-}
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#0f172a', // slate-900
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 24,
-  },
-  card: {
-    backgroundColor: '#7c3aed', // violet-600
-    borderRadius: 16,           // rounded-2xl
-    padding: 24,
-    shadowColor: '#000',        // shadow-xl
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.3,
-    shadowRadius: 20,
-    elevation: 10,              // Sombra necessária para o Android
-    width: '100%',
-    maxWidth: 340,
-  },
-  title: {
-    fontSize: 24,               // text-2xl
-    fontWeight: 'bold',         // font-bold
-    color: '#ffffff',           // text-white
-    textAlign: 'center',
-    marginBottom: 8,            // mt-2 equivalente
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#e2e8f0',           // text-slate-200
-    textAlign: 'center',
-    lineHeight: 22,
-  },
-});
+};
