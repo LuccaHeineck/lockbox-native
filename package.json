@@ -9,14 +9,18 @@
     "web": "expo start --web"
   },
   "dependencies": {
+    "@expo/vector-icons": "^15.0.2",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@react-navigation/native": "^7.3.0",
     "@react-navigation/stack": "^7.10.2",
     "@supabase/supabase-js": "^2.108.1",
     "expo": "~55.0.26",
+    "expo-build-properties": "~55.0.14",
     "expo-crypto": "~55.0.15",
+    "expo-font": "~55.0.8",
     "expo-secure-store": "~55.0.14",
     "expo-status-bar": "~55.0.6",
+    "expo-system-ui": "~55.0.18",
     "react": "19.2.0",
     "react-dom": "19.2.0",
     "react-native": "0.83.6",
@@ -27,8 +31,8 @@
     "react-native-web": "^0.21.0"
   },
   "devDependencies": {
-    "@types/react": "~19.2.2",
-    "typescript": "~5.9.2"
+    "@types/react": "~19.2.10",
+    "typescript": "^5.3.3"
   },
   "private": true
 }

@@ -7,12 +7,14 @@ import { useAuth } from '../context/AuthContext';
 import { LoginScreen } from '../screens/LoginScreen';
 import { RegisterScreen } from '../screens/RegisterScreen';
 import { HomeScreen } from '../screens/HomeScreen';
+import { CredentialsScreen } from '../screens/CredentialsScreen'; // Importa a nova tela
 
-// Tipagem básica para garantir navegação segura entre telas
+// Definimos o que cada rota espera receber
 export type RootStackParamList = {
   Login: undefined;
   Register: undefined;
   Home: undefined;
+  Credentials: { groupId: string; groupName: string }; // Recebe dados do grupo
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
@@ -32,7 +34,10 @@ export function Routes() {
     <NavigationContainer>
       <Stack.Navigator screenOptions={{ headerShown: false, animation: 'none' }}>
         {user ? (
-          <Stack.Screen name="Home" component={HomeScreen} />
+          <>
+            <Stack.Screen name="Home" component={HomeScreen} />
+            <Stack.Screen name="Credentials" component={CredentialsScreen} />
+          </>
         ) : (
           <>
             <Stack.Screen name="Login" component={LoginScreen} />
