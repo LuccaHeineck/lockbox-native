@@ -8,19 +8,21 @@ import { LoginScreen } from '../screens/LoginScreen';
 import { RegisterScreen } from '../screens/RegisterScreen';
 import { HomeScreen } from '../screens/HomeScreen';
 import { CredentialsScreen } from '../screens/CredentialsScreen'; // Importa a nova tela
+import { UnlockScreen } from '../screens/UnlockScreen';
 
 // Definimos o que cada rota espera receber
 export type RootStackParamList = {
   Login: undefined;
   Register: undefined;
   Home: undefined;
+  Unlock: undefined;
   Credentials: { groupId: string; groupName: string }; // Recebe dados do grupo
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
 
 export function Routes() {
-  const { user, loading } = useAuth();
+  const { user, loading, isUnlocked } = useAuth();
 
   if (loading) {
     return (
@@ -34,10 +36,14 @@ export function Routes() {
     <NavigationContainer>
       <Stack.Navigator screenOptions={{ headerShown: false, animation: 'none' }}>
         {user ? (
-          <>
-            <Stack.Screen name="Home" component={HomeScreen} />
-            <Stack.Screen name="Credentials" component={CredentialsScreen} />
-          </>
+          isUnlocked ? (
+            <>
+              <Stack.Screen name="Home" component={HomeScreen} />
+              <Stack.Screen name="Credentials" component={CredentialsScreen} />
+            </>
+          ) : (
+            <Stack.Screen name="Unlock" component={UnlockScreen} />
+          )
         ) : (
           <>
             <Stack.Screen name="Login" component={LoginScreen} />

@@ -6,6 +6,8 @@ interface AuthContextData {
   user: User | null;
   session: Session | null;
   loading: boolean;
+  isUnlocked: boolean;
+  setUnlocked: (val: boolean) => void;
 }
 
 const AuthContext = createContext<AuthContextData>({} as AuthContextData);
@@ -14,6 +16,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isUnlocked, setIsUnlocked] = useState(false);
 
   useEffect(() => {
     // Checa sessão atual ao abrir o app
@@ -34,7 +37,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, session, loading }}>
+    <AuthContext.Provider value={{ user, session, loading, isUnlocked, setUnlocked: setIsUnlocked }}>
       {children}
     </AuthContext.Provider>
   );
