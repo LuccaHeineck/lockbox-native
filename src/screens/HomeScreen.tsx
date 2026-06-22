@@ -15,6 +15,8 @@ import { useAuth } from '../context/AuthContext';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../routes';
+import { Ionicons } from '@expo/vector-icons';
+import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 
 interface Group {
   id: string;
@@ -106,29 +108,36 @@ export function HomeScreen() {
   if (checkingProfile) {
     return (
       <View style={styles.containerCenter}>
-        <ActivityIndicator size="small" color="#6366f1" />
+        <ActivityIndicator size="small" color="#F43F5E" />
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
-      <View style={styles.navbar}>
-        <Text style={styles.navBrand}>lockbox</Text>
+      <Animated.View entering={FadeInUp.duration(500)} style={styles.navbar}>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <Ionicons name="lock-closed" size={20} color="#F43F5E" style={{ marginRight: 8 }} />
+          <Text style={styles.navBrand}>lockbox</Text>
+        </View>
         <TouchableOpacity style={styles.buttonLogout} onPress={() => supabase.auth.signOut()}>
-          <Text style={styles.buttonLogoutText}>Sair</Text>
+          <Ionicons name="log-out-outline" size={20} color="#737373" />
         </TouchableOpacity>
-      </View>
+      </Animated.View>
 
       <View style={styles.content}>
-        <Text style={styles.title}>Seus Grupos</Text>
-        <Text style={styles.subtitle}>Gerencie as categorias do seu cofre</Text>
+        <Animated.Text entering={FadeInUp.duration(500).delay(100)} style={styles.title}>
+          Seus Grupos
+        </Animated.Text>
+        <Animated.Text entering={FadeInUp.duration(500).delay(200)} style={styles.subtitle}>
+          Gerencie as categorias do seu cofre
+        </Animated.Text>
 
-        <View style={styles.inputContainer}>
+        <Animated.View entering={FadeInUp.duration(500).delay(300)} style={styles.inputContainer}>
           <TextInput
             style={styles.input}
             placeholder="Novo grupo (ex: Bancos)"
-            placeholderTextColor="#4b5563"
+            placeholderTextColor="#525252"
             value={newGroupName}
             onChangeText={setNewGroupName}
             editable={!isSubmitting}
@@ -137,36 +146,44 @@ export function HomeScreen() {
             style={[styles.buttonAdd, !newGroupName.trim() && styles.buttonAddDisabled]}
             onPress={handleCreateGroup}
             disabled={isSubmitting || !newGroupName.trim()}
+            activeOpacity={0.8}
           >
             {isSubmitting ? (
               <ActivityIndicator size="small" color="#ffffff" />
             ) : (
-              <Text style={styles.buttonAddText}>+</Text>
+              <Ionicons name="add" size={24} color="#ffffff" />
             )}
           </TouchableOpacity>
-        </View>
+        </Animated.View>
 
         {loadingGroups ? (
-          <ActivityIndicator size="small" color="#6366f1" style={{ marginTop: 40 }} />
+          <ActivityIndicator size="small" color="#F43F5E" style={{ marginTop: 40 }} />
         ) : (
           <FlatList
             data={groups}
             keyExtractor={(item) => item.id}
             contentContainerStyle={styles.listContainer}
+            showsVerticalScrollIndicator={false}
             ListEmptyComponent={() => (
-              <View style={styles.emptyCard}>
+              <Animated.View entering={FadeInDown.duration(500)} style={styles.emptyCard}>
+                <Ionicons name="folder-open-outline" size={32} color="#262626" style={{ marginBottom: 12 }} />
                 <Text style={styles.emptyText}>Nenhum grupo mapeado ainda.</Text>
-              </View>
+              </Animated.View>
             )}
-            renderItem={({ item }) => (
-              <TouchableOpacity
-                style={styles.groupCard}
-                activeOpacity={0.7}
-                onPress={() => navigation.navigate('Credentials', { groupId: item.id, groupName: item.name })}
-              >
-                <Text style={styles.groupName}>{item.name}</Text>
-                <Text style={styles.groupArrow}>→</Text>
-              </TouchableOpacity>
+            renderItem={({ item, index }) => (
+              <Animated.View entering={FadeInDown.duration(400).delay(index * 100)}>
+                <TouchableOpacity
+                  style={styles.groupCard}
+                  activeOpacity={0.7}
+                  onPress={() => navigation.navigate('Credentials', { groupId: item.id, groupName: item.name })}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <Ionicons name="folder" size={20} color="#F43F5E" style={{ marginRight: 12 }} />
+                    <Text style={styles.groupName}>{item.name}</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={20} color="#525252" />
+                </TouchableOpacity>
+              </Animated.View>
             )}
           />
         )}
@@ -178,11 +195,11 @@ export function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#030712'
+    backgroundColor: '#0A0A0A'
   },
   containerCenter: {
     flex: 1,
-    backgroundColor: '#030712',
+    backgroundColor: '#0A0A0A',
     justifyContent: 'center',
     alignItems: 'center'
   },
@@ -192,116 +209,100 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingTop: 60,
     paddingBottom: 16,
-    borderBottomWidth: 1,
-    borderColor: '#1f2937',
     justifyContent: 'space-between'
   },
   navBrand: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#f3f4f6',
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#F5F5F5',
     letterSpacing: -0.5
   },
   buttonLogout: {
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 6,
-    backgroundColor: '#111827',
-    borderWidth: 1,
-    borderColor: '#1f2937'
-  },
-  buttonLogoutText: {
-    color: '#9ca3af',
-    fontSize: 13,
-    fontWeight: '500'
+    padding: 8,
   },
   content: {
     flex: 1,
     paddingHorizontal: 24,
-    paddingTop: 32
+    paddingTop: 16
   },
   title: {
-    fontSize: 22,
-    fontWeight: '600',
-    color: '#f3f4f6',
-    letterSpacing: -0.3
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#F5F5F5',
+    letterSpacing: -0.5
   },
   subtitle: {
     fontSize: 14,
-    color: '#6b7280',
+    color: '#A3A3A3',
     marginTop: 4,
-    marginBottom: 24
+    marginBottom: 32
   },
   inputContainer: {
     flexDirection: 'row',
-    marginBottom: 24,
+    marginBottom: 32,
     gap: 12
   },
   input: {
     flex: 1,
-    backgroundColor: '#0f172a',
+    backgroundColor: '#171717',
     borderWidth: 1,
-    borderColor: '#1f2937',
-    color: '#f3f4f6',
-    padding: 12,
-    borderRadius: 8,
+    borderColor: '#262626',
+    color: '#F5F5F5',
+    padding: 16,
+    borderRadius: 12,
     fontSize: 15,
   },
   buttonAdd: {
-    backgroundColor: '#6366f1',
-    width: 48,
-    borderRadius: 8,
+    backgroundColor: '#F43F5E',
+    width: 54,
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#4f46e5'
+    shadowColor: '#F43F5E',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4
   },
   buttonAddDisabled: {
-    backgroundColor: '#111827',
-    borderColor: '#1f2937',
-    opacity: 0.6
-  },
-  buttonAddText: {
-    color: '#fff',
-    fontSize: 20,
-    fontWeight: '600'
+    backgroundColor: '#171717',
+    borderWidth: 1,
+    borderColor: '#262626',
+    shadowOpacity: 0,
+    elevation: 0
   },
   listContainer: {
-    paddingBottom: 24
+    paddingBottom: 40
   },
   groupCard: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#090d16',
+    backgroundColor: '#171717',
     borderWidth: 1,
-    borderColor: '#1f2937',
-    padding: 16,
-    borderRadius: 8,
+    borderColor: '#262626',
+    padding: 20,
+    borderRadius: 16,
     marginBottom: 12
   },
   groupName: {
-    color: '#f3f4f6',
-    fontSize: 15,
-    fontWeight: '500'
-  },
-  groupArrow: {
-    color: '#4b5563',
-    fontSize: 16
+    color: '#F5F5F5',
+    fontSize: 16,
+    fontWeight: '600'
   },
   emptyCard: {
     borderWidth: 1,
-    borderColor: '#1f2937',
+    borderColor: '#262626',
     borderStyle: 'dashed',
-    borderRadius: 8,
-    padding: 32,
+    borderRadius: 16,
+    padding: 40,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#090d16',
+    backgroundColor: '#171717',
     marginTop: 12
   },
   emptyText: {
-    color: '#4b5563',
+    color: '#A3A3A3',
     fontSize: 14,
     textAlign: 'center'
   }

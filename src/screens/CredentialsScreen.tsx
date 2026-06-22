@@ -14,6 +14,7 @@ import { RootStackParamList } from '../routes';
 import { supabase } from '../utils/supabase';
 import { useAuth } from '../context/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
+import Animated, { FadeInDown, FadeInUp, Layout, SlideInRight } from 'react-native-reanimated';
 
 type CredentialsScreenRouteProp = RouteProp<RootStackParamList, 'Credentials'>;
 
@@ -101,22 +102,27 @@ export function CredentialsScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.navbar}>
-        <TouchableOpacity style={styles.buttonBack} onPress={() => navigation.goBack()}>
-          <Text style={styles.buttonBackText}>← Voltar</Text>
+      <Animated.View entering={FadeInUp.duration(500)} style={styles.navbar}>
+        <TouchableOpacity style={styles.buttonBack} onPress={() => navigation.goBack()} activeOpacity={0.7}>
+          <Ionicons name="arrow-back" size={24} color="#A3A3A3" />
         </TouchableOpacity>
         <Text style={styles.navBrand}>lockbox</Text>
-      </View>
+        <View style={{ width: 24 }} />
+      </Animated.View>
 
       <View style={styles.content}>
-        <Text style={styles.title}>{groupName}</Text>
-        <Text style={styles.subtitle}>Credenciais seguras guardadas nesta pasta</Text>
+        <Animated.Text entering={FadeInUp.duration(500).delay(100)} style={styles.title}>
+          {groupName}
+        </Animated.Text>
+        <Animated.Text entering={FadeInUp.duration(500).delay(200)} style={styles.subtitle}>
+          Credenciais seguras guardadas nesta pasta
+        </Animated.Text>
 
-        <View style={styles.form}>
+        <Animated.View entering={FadeInUp.duration(500).delay(300)} style={styles.form}>
           <TextInput
             style={styles.input}
             placeholder="Título (ex: GitHub)"
-            placeholderTextColor="#4b5563"
+            placeholderTextColor="#525252"
             value={title}
             onChangeText={setTitle}
           />
@@ -124,7 +130,7 @@ export function CredentialsScreen() {
             <TextInput
               style={[styles.input, { flex: 1, marginBottom: 0 }]}
               placeholder="Usuário / E-mail"
-              placeholderTextColor="#4b5563"
+              placeholderTextColor="#525252"
               value={username}
               onChangeText={setUsername}
               autoCapitalize="none"
@@ -132,7 +138,7 @@ export function CredentialsScreen() {
             <TextInput
               style={[styles.input, { flex: 1, marginBottom: 0 }]}
               placeholder="Senha"
-              placeholderTextColor="#4b5563"
+              placeholderTextColor="#525252"
               value={password}
               onChangeText={setPassword}
               secureTextEntry
@@ -144,6 +150,7 @@ export function CredentialsScreen() {
             style={styles.buttonSave} 
             onPress={handleCreateCredential}
             disabled={isSubmitting}
+            activeOpacity={0.8}
           >
             {isSubmitting ? (
               <ActivityIndicator size="small" color="#ffffff" />
@@ -151,25 +158,31 @@ export function CredentialsScreen() {
               <Text style={styles.buttonSaveText}>Adicionar Credencial</Text>
             )}
           </TouchableOpacity>
-        </View>
+        </Animated.View>
 
         {loading ? (
-          <ActivityIndicator size="small" color="#6366f1" style={{ marginTop: 40 }} />
+          <ActivityIndicator size="small" color="#F43F5E" style={{ marginTop: 40 }} />
         ) : (
           <FlatList
             data={credentials}
             keyExtractor={(item) => item.id}
             contentContainerStyle={styles.listContainer}
+            showsVerticalScrollIndicator={false}
             ListEmptyComponent={() => (
-              <View style={styles.emptyCard}>
+              <Animated.View entering={FadeInDown.duration(500)} style={styles.emptyCard}>
+                <Ionicons name="key-outline" size={32} color="#262626" style={{ marginBottom: 12 }} />
                 <Text style={styles.emptyText}>Nenhuma senha guardada aqui ainda.</Text>
-              </View>
+              </Animated.View>
             )}
-            renderItem={({ item }) => {
+            renderItem={({ item, index }) => {
               const isVisible = visiblePasswordId === item.id;
               
               return (
-                <View style={styles.credentialCard}>
+                <Animated.View 
+                  entering={FadeInDown.duration(400).delay(index * 100)} 
+                  layout={Layout.springify()} 
+                  style={styles.credentialCard}
+                >
                   <View style={{ flex: 1 }}>
                     <Text style={styles.credentialTitle}>{item.title}</Text>
                     <Text style={styles.credentialLogin}>{item.username}</Text>
@@ -187,12 +200,12 @@ export function CredentialsScreen() {
                     >
                       <Ionicons 
                         name={isVisible ? "eye-off-outline" : "eye-outline"} 
-                        size={18} 
-                        color="#9ca3af" 
+                        size={20} 
+                        color="#A3A3A3" 
                       />
                     </TouchableOpacity>
                   </View>
-                </View>
+                </Animated.View>
               );
             }}
           />
@@ -205,7 +218,7 @@ export function CredentialsScreen() {
 const styles = StyleSheet.create({
   container: { 
     flex: 1, 
-    backgroundColor: '#030712' 
+    backgroundColor: '#0A0A0A' 
   },
   passwordContainer: {
     flexDirection: 'row',
@@ -217,135 +230,129 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  buttonRevealText: {
-    color: '#9ca3af',
-    fontSize: 12,
-    fontWeight: '500'
-  },
   navbar: { 
     flexDirection: 'row', 
     alignItems: 'center', 
     paddingHorizontal: 24, 
     paddingTop: 60, 
     paddingBottom: 16,
-    borderBottomWidth: 1,
-    borderColor: '#1f2937',
     justifyContent: 'space-between'
   },
   buttonBack: { 
-    paddingVertical: 6, 
-    paddingHorizontal: 12, 
-    borderRadius: 6, 
-    backgroundColor: '#111827', 
-    borderWidth: 1, 
-    borderColor: '#1f2937' 
-  },
-  buttonBackText: { 
-    color: '#9ca3af', 
-    fontSize: 13, 
-    fontWeight: '500' 
+    padding: 8,
+    marginLeft: -8
   },
   navBrand: { 
-    fontSize: 18, 
-    fontWeight: '700', 
-    color: '#f3f4f6', 
+    fontSize: 20, 
+    fontWeight: '800', 
+    color: '#F5F5F5', 
     letterSpacing: -0.5 
   },
   content: { 
     flex: 1, 
     paddingHorizontal: 24, 
-    paddingTop: 24 
+    paddingTop: 16 
   },
   title: { 
-    fontSize: 22, 
-    fontWeight: '600', 
-    color: '#f3f4f6', 
-    letterSpacing: -0.3 
+    fontSize: 28, 
+    fontWeight: '700', 
+    color: '#F5F5F5', 
+    letterSpacing: -0.5 
   },
   subtitle: { 
     fontSize: 14, 
-    color: '#6b7280', 
+    color: '#A3A3A3', 
     marginTop: 4, 
-    marginBottom: 20 
+    marginBottom: 32 
   },
   form: { 
-    backgroundColor: '#090d16', 
+    backgroundColor: '#171717', 
     borderWidth: 1, 
-    borderColor: '#1f2937', 
-    padding: 16, 
-    borderRadius: 8, 
-    marginBottom: 24 
+    borderColor: '#262626', 
+    padding: 20, 
+    borderRadius: 16, 
+    marginBottom: 32,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 6
   },
   rowInputs: { 
     flexDirection: 'row', 
     gap: 12, 
-    marginBottom: 12 
+    marginBottom: 16 
   },
   input: { 
-    backgroundColor: '#030712', 
+    backgroundColor: '#0A0A0A', 
     borderWidth: 1, 
-    borderColor: '#1f2937', 
-    color: '#f3f4f6', 
-    padding: 10, 
-    borderRadius: 6, 
+    borderColor: '#262626', 
+    color: '#F5F5F5', 
+    padding: 14, 
+    borderRadius: 12, 
     fontSize: 14,
-    marginBottom: 12
+    marginBottom: 16
   },
   buttonSave: { 
-    backgroundColor: '#6366f1', 
-    padding: 12, 
-    borderRadius: 6, 
+    backgroundColor: '#F43F5E', 
+    padding: 16, 
+    borderRadius: 12, 
     alignItems: 'center', 
-    borderWidth: 1, 
-    borderColor: '#4f46e5', 
-    marginTop: 4 
+    marginTop: 4,
+    shadowColor: '#F43F5E',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4
   },
   buttonSaveText: { 
     color: '#ffffff', 
-    fontSize: 14, 
-    fontWeight: '600' 
+    fontSize: 15, 
+    fontWeight: '700',
+    letterSpacing: 0.5 
   },
   listContainer: { 
-    paddingBottom: 24 
+    paddingBottom: 40 
   },
   credentialCard: { 
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#090d16', 
+    backgroundColor: '#171717', 
     borderWidth: 1, 
-    borderColor: '#1f2937', 
-    padding: 16, 
-    borderRadius: 8, 
+    borderColor: '#262626', 
+    padding: 20, 
+    borderRadius: 16, 
     marginBottom: 12 
   },
   credentialTitle: { 
-    color: '#f3f4f6', 
-    fontSize: 15, 
+    color: '#F5F5F5', 
+    fontSize: 16, 
     fontWeight: '600' 
   },
   credentialLogin: { 
-    color: '#6b7280', 
+    color: '#A3A3A3', 
     fontSize: 13, 
-    marginTop: 2 
+    marginTop: 4 
   },
   credentialPassword: { 
-    color: '#e5e7eb', 
+    color: '#F5F5F5', 
     fontFamily: 'monospace', 
-    fontSize: 14 
+    fontSize: 14,
+    letterSpacing: 2
   },
   emptyCard: { 
     borderWidth: 1, 
-    borderColor: '#1f2937', 
+    borderColor: '#262626', 
     borderStyle: 'dashed', 
-    borderRadius: 8, 
-    padding: 32, 
+    borderRadius: 16, 
+    padding: 40, 
     alignItems: 'center', 
     justifyContent: 'center',
-    backgroundColor: '#090d16',
+    backgroundColor: '#171717',
   },
   emptyText: { 
-    color: '#4b5563', 
+    color: '#A3A3A3', 
     fontSize: 14, 
     textAlign: 'center' 
   }
