@@ -7,16 +7,15 @@ import { useAuth } from '../context/AuthContext';
 import { LoginScreen } from '../screens/LoginScreen';
 import { RegisterScreen } from '../screens/RegisterScreen';
 import { HomeScreen } from '../screens/HomeScreen';
-import { CredentialsScreen } from '../screens/CredentialsScreen'; // Importa a nova tela
+import { CredentialsScreen } from '../screens/CredentialsScreen';
 import { UnlockScreen } from '../screens/UnlockScreen';
 
-// Definimos o que cada rota espera receber
 export type RootStackParamList = {
   Login: undefined;
   Register: undefined;
   Home: undefined;
   Unlock: undefined;
-  Credentials: { groupId: string; groupName: string }; // Recebe dados do grupo
+  Credentials: { groupId: string; groupName: string };
 };
 
 const Stack = createStackNavigator<RootStackParamList>();

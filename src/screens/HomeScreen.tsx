@@ -66,6 +66,49 @@ export function HomeScreen() {
     initializeHome();
   }, [user]);
 
+
+  async function handleDeleteGroup(id: string) {
+    try {
+      const { error } = await supabase
+        .from('groups')
+        .delete()
+        .eq('id', id);
+      if (error) throw error;
+      await fetchGroups();
+    } catch (err: any) {
+      Alert.alert('Erro ao excluir grupo', err.message);
+    }
+  }
+
+  async function handleEditGroup(id: string, currentName: string) {
+    Alert.prompt(
+      'Renomear Grupo',
+      'Digite o novo nome do grupo',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Salvar',
+          onPress: async (newName: string | undefined) => {
+            if (!newName?.trim()) return;
+            try {
+              const { error } = await supabase
+                .from('groups')
+                .update({ name: newName.trim() })
+                .eq('id', id);
+              if (error) throw error;
+              await fetchGroups();
+            } catch (e: any) {
+              Alert.alert('Erro ao atualizar grupo', e.message);
+            }
+          },
+        },
+      ],
+      'plain-text',
+      currentName
+    );
+      // Moved group fetching logic to dedicated async function
+  }
+
   async function fetchGroups() {
     if (!user) return;
     setLoadingGroups(true);
@@ -90,14 +133,14 @@ export function HomeScreen() {
 
     setIsSubmitting(true);
     try {
-      const { error } = await supabase
-        .from('groups')
-        .insert([{ name: newGroupName.trim(), user_id: user.id }]);
+        const { error } = await supabase
+          .from('groups')
+          .insert([{ name: newGroupName.trim(), user_id: user.id }]);
 
-      if (error) throw error;
+        if (error) throw error;
 
-      setNewGroupName('');
-      await fetchGroups();
+        setNewGroupName('');
+        await fetchGroups();
     } catch (error: any) {
       Alert.alert('Erro ao criar grupo', error.message);
     } finally {
@@ -178,10 +221,35 @@ export function HomeScreen() {
                   onPress={() => navigation.navigate('Credentials', { groupId: item.id, groupName: item.name })}
                 >
                   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <Ionicons name="folder" size={20} color="#F43F5E" style={{ marginRight: 12 }} />
+                    <Ionicons name="folder" size={20} color="#F5F5F5" style={{ marginRight: 12 }} />
                     <Text style={styles.groupName}>{item.name}</Text>
                   </View>
-                  <Ionicons name="chevron-forward" size={20} color="#525252" />
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <TouchableOpacity
+                      style={{ marginRight: 12 }}
+                      onPress={() => handleEditGroup(item.id, item.name)}
+                    >
+                      <Ionicons name="create-outline" size={20} color="#F43F5E" />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={{ marginRight: 12 }}
+                      onPress={() => {
+                        Alert.alert(
+                          'Excluir grupo',
+                          'Tem certeza que deseja excluir este grupo?',
+                          [
+                            { text: 'Cancelar', style: 'cancel' },
+                            { text: 'Excluir', style: 'destructive', onPress: () => handleDeleteGroup(item.id) },
+                          ]
+                        );
+                      }}
+                    >
+                      <Ionicons name="trash-outline" size={20} color="#F43F5E" />
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => navigation.navigate('Credentials', { groupId: item.id, groupName: item.name })}>
+                      <Ionicons name="chevron-forward" size={20} color="#525252" />
+                    </TouchableOpacity>
+                  </View>
                 </TouchableOpacity>
               </Animated.View>
             )}
@@ -193,6 +261,12 @@ export function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
+  actionContainer: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginTop: 12,
+    gap: 12,
+  },
   container: {
     flex: 1,
     backgroundColor: '#0A0A0A'

@@ -1,28 +1,28 @@
 import React, { useEffect, useState } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  TouchableOpacity, 
-  FlatList, 
-  TextInput, 
-  ActivityIndicator, 
-  Alert 
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  FlatList,
+  TextInput,
+  ActivityIndicator,
+  Alert
 } from 'react-native';
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
 import { RootStackParamList } from '../routes';
 import { supabase } from '../utils/supabase';
+import { encryptData, decryptData } from '../utils/crypto';
 import { useAuth } from '../context/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
-import Animated, { FadeInDown, FadeInUp, Layout, SlideInRight } from 'react-native-reanimated';
-
+import Animated, { FadeInDown, FadeInUp, Layout } from 'react-native-reanimated';
 type CredentialsScreenRouteProp = RouteProp<RootStackParamList, 'Credentials'>;
 
 interface Credential {
   id: string;
   title: string;
   username: string;
-  encrypted_password: string;
+  password: string;
 }
 
 export function CredentialsScreen() {
@@ -39,6 +39,7 @@ export function CredentialsScreen() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [visiblePasswordId, setVisiblePasswordId] = useState<string | null>(null);
+  const [editingCredentialId, setEditingCredentialId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchCredentials();
@@ -54,7 +55,19 @@ export function CredentialsScreen() {
         .order('title', { ascending: true });
 
       if (error) throw error;
-      setCredentials(data || []);
+      if (data) {
+        const decrypted = await Promise.all(
+          data.map(async (item) => ({
+            id: item.id,
+            title: item.title,
+            username: await decryptData(item.username),
+            password: await decryptData(item.encrypted_password),
+          }))
+        );
+        setCredentials(decrypted);
+      } else {
+        setCredentials([]);
+      }
     } catch (error: any) {
       Alert.alert('Erro', error.message);
     } finally {
@@ -75,28 +88,63 @@ export function CredentialsScreen() {
 
     setIsSubmitting(true);
     try {
-      const { error } = await supabase
-        .from('credentials')
-        .insert([{
-          user_id: user.id,
-          group_id: groupId,
-          title: title.trim(),
-          username: username.trim(),
-          encrypted_password: password.trim(),
-          encryption_iv: 'placeholder_iv_until_crypto_implemented'
-        }]);
-
-      if (error) throw error;
+      if (editingCredentialId) {
+        const { error } = await supabase
+          .from('credentials')
+          .update({
+            title: title.trim(),
+            username: await encryptData(username.trim()),
+            encrypted_password: await encryptData(password.trim()),
+          })
+          .eq('id', editingCredentialId);
+        if (error) throw error;
+        setEditingCredentialId(null);
+      } else {
+        const { error } = await supabase
+          .from('credentials')
+          .insert([{
+            user_id: user.id,
+            group_id: groupId,
+            title: title.trim(),
+            username: await encryptData(username.trim()),
+            encrypted_password: await encryptData(password.trim()),
+            encryption_iv: 'placeholder_iv_until_crypto_implemented'
+          }]);
+        if (error) throw error;
+      }
 
       setTitle('');
       setUsername('');
       setPassword('');
-      
+
       await fetchCredentials();
     } catch (error: any) {
       Alert.alert('Erro ao salvar', error.message);
     } finally {
       setIsSubmitting(false);
+    }
+  }
+
+  function startEditCredential(item: Credential) {
+    setEditingCredentialId(item.id);
+    setTitle(item.title);
+    setUsername(item.username);
+    setPassword(item.password);
+  }
+
+  // Toggle visibility of password in list
+  function togglePasswordVisibility(item: Credential) {
+    setVisiblePasswordId(visiblePasswordId === item.id ? null : item.id);
+  }
+
+  // Delete a credential
+  async function handleDeleteCredential(id: string) {
+    try {
+      const { error } = await supabase.from('credentials').delete().eq('id', id);
+      if (error) throw error;
+      await fetchCredentials();
+    } catch (e: any) {
+      Alert.alert('Erro ao excluir credencial', e.message);
     }
   }
 
@@ -145,9 +193,9 @@ export function CredentialsScreen() {
               autoCapitalize="none"
             />
           </View>
-          
-          <TouchableOpacity 
-            style={styles.buttonSave} 
+
+          <TouchableOpacity
+            style={styles.buttonSave}
             onPress={handleCreateCredential}
             disabled={isSubmitting}
             activeOpacity={0.8}
@@ -176,34 +224,62 @@ export function CredentialsScreen() {
             )}
             renderItem={({ item, index }) => {
               const isVisible = visiblePasswordId === item.id;
-              
+
               return (
-                <Animated.View 
-                  entering={FadeInDown.duration(400).delay(index * 100)} 
-                  layout={Layout.springify()} 
+                <Animated.View
+                  entering={FadeInDown.duration(400).delay(index * 100)}
+                  layout={Layout.springify()}
                   style={styles.credentialCard}
                 >
-                  <View style={{ flex: 1 }}>
+                  {/* Top row: title + username */}
+                  <View style={styles.cardTop}>
                     <Text style={styles.credentialTitle}>{item.title}</Text>
                     <Text style={styles.credentialLogin}>{item.username}</Text>
                   </View>
-                  
-                  <View style={styles.passwordContainer}>
-                    <Text style={styles.credentialPassword}>
-                      {isVisible ? item.encrypted_password : '••••••••'}
-                    </Text>
-                    
-                    <TouchableOpacity 
-                      style={styles.buttonReveal}
-                      onPress={() => setVisiblePasswordId(isVisible ? null : item.id)}
-                      activeOpacity={0.6}
-                    >
-                      <Ionicons 
-                        name={isVisible ? "eye-off-outline" : "eye-outline"} 
-                        size={20} 
-                        color="#A3A3A3" 
-                      />
-                    </TouchableOpacity>
+
+                  {/* Bottom row: password + actions */}
+                  <View style={styles.cardBottom}>
+                    <View style={styles.passwordRow}>
+                      <Text style={styles.credentialPassword}>
+                        {isVisible ? item.password : '••••••••'}
+                      </Text>
+                      <TouchableOpacity
+                        onPress={() => togglePasswordVisibility(item)}
+                        activeOpacity={0.6}
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      >
+                        <Ionicons
+                          name={isVisible ? 'eye-off-outline' : 'eye-outline'}
+                          size={18}
+                          color="#A3A3A3"
+                        />
+                      </TouchableOpacity>
+                    </View>
+
+                    <View style={styles.actionRow}>
+                      <TouchableOpacity
+                        onPress={() => startEditCredential(item)}
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      >
+                        <Ionicons name="create-outline" size={18} color="#F43F5E" />
+                      </TouchableOpacity>
+                      <View style={styles.actionDivider} />
+                      <TouchableOpacity
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        onPress={() => {
+                          Alert.alert(
+                            'Excluir credencial',
+                            'Tem certeza que deseja excluir esta credencial?',
+                            [
+                              { text: 'Cancelar', style: 'cancel' },
+                              { text: 'Excluir', style: 'destructive', onPress: () => handleDeleteCredential(item.id) },
+                            ]
+                          );
+                        }}
+                      >
+                        <Ionicons name="trash-outline" size={18} color="#F43F5E" />
+                      </TouchableOpacity>
+                    </View>
                   </View>
                 </Animated.View>
               );
@@ -216,61 +292,69 @@ export function CredentialsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
-    backgroundColor: '#0A0A0A' 
+  container: {
+    flex: 1,
+    backgroundColor: '#0A0A0A'
   },
   passwordContainer: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12
+    alignItems: 'center', // vertically center password text and eye button
+    gap: 12,
+    // Ensure vertical alignment of text and button
+    overflow: 'visible',
   },
   buttonReveal: {
-    padding: 6,
+    // Slightly enlarge touchable area and ensure icon is fully visible
+    padding: 2,
     justifyContent: 'center',
-    alignItems: 'center',
+    alignItems: 'center', // center icon within touchable area
+    alignSelf: 'center',
+    marginLeft: 4,
+    width: 28,
+    height: 28,
+    overflow: 'visible',
   },
-  navbar: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    paddingHorizontal: 24, 
-    paddingTop: 60, 
+  navbar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    paddingTop: 60,
     paddingBottom: 16,
     justifyContent: 'space-between'
   },
-  buttonBack: { 
+  buttonBack: {
     padding: 8,
     marginLeft: -8
   },
-  navBrand: { 
-    fontSize: 20, 
-    fontWeight: '800', 
-    color: '#F5F5F5', 
-    letterSpacing: -0.5 
+  navBrand: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#F5F5F5',
+    letterSpacing: -0.5
   },
-  content: { 
-    flex: 1, 
-    paddingHorizontal: 24, 
-    paddingTop: 16 
+  content: {
+    flex: 1,
+    paddingHorizontal: 24,
+    paddingTop: 16
   },
-  title: { 
-    fontSize: 28, 
-    fontWeight: '700', 
-    color: '#F5F5F5', 
-    letterSpacing: -0.5 
+  title: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#F5F5F5',
+    letterSpacing: -0.5
   },
-  subtitle: { 
-    fontSize: 14, 
-    color: '#A3A3A3', 
-    marginTop: 4, 
-    marginBottom: 32 
+  subtitle: {
+    fontSize: 14,
+    color: '#A3A3A3',
+    marginTop: 4,
+    marginBottom: 32
   },
-  form: { 
-    backgroundColor: '#171717', 
-    borderWidth: 1, 
-    borderColor: '#262626', 
-    padding: 20, 
-    borderRadius: 16, 
+  form: {
+    backgroundColor: '#171717',
+    borderWidth: 1,
+    borderColor: '#262626',
+    padding: 20,
+    borderRadius: 16,
     marginBottom: 32,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 8 },
@@ -278,26 +362,26 @@ const styles = StyleSheet.create({
     shadowRadius: 16,
     elevation: 6
   },
-  rowInputs: { 
-    flexDirection: 'row', 
-    gap: 12, 
-    marginBottom: 16 
+  rowInputs: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 16
   },
-  input: { 
-    backgroundColor: '#0A0A0A', 
-    borderWidth: 1, 
-    borderColor: '#262626', 
-    color: '#F5F5F5', 
-    padding: 14, 
-    borderRadius: 12, 
+  input: {
+    backgroundColor: '#0A0A0A',
+    borderWidth: 1,
+    borderColor: '#262626',
+    color: '#F5F5F5',
+    padding: 14,
+    borderRadius: 12,
     fontSize: 14,
     marginBottom: 16
   },
-  buttonSave: { 
-    backgroundColor: '#F43F5E', 
-    padding: 16, 
-    borderRadius: 12, 
-    alignItems: 'center', 
+  buttonSave: {
+    backgroundColor: '#F43F5E',
+    padding: 16,
+    borderRadius: 12,
+    alignItems: 'center',
     marginTop: 4,
     shadowColor: '#F43F5E',
     shadowOffset: { width: 0, height: 4 },
@@ -305,55 +389,88 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 4
   },
-  buttonSaveText: { 
-    color: '#ffffff', 
-    fontSize: 15, 
+  buttonSaveText: {
+    color: '#ffffff',
+    fontSize: 15,
     fontWeight: '700',
-    letterSpacing: 0.5 
+    letterSpacing: 0.5
   },
-  listContainer: { 
-    paddingBottom: 40 
+  listContainer: {
+    paddingBottom: 40
   },
-  credentialCard: { 
+  credentialCard: {
+    backgroundColor: '#171717',
+    borderWidth: 1,
+    borderColor: '#262626',
+    borderRadius: 16,
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 0,
+    marginBottom: 12,
+  },
+  cardTop: {
+    marginBottom: 12,
+  },
+  cardBottom: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#171717', 
-    borderWidth: 1, 
-    borderColor: '#262626', 
-    padding: 20, 
-    borderRadius: 16, 
-    marginBottom: 12 
+    justifyContent: 'space-between',
+    borderTopWidth: 0.5,
+    borderTopColor: '#262626',
+    paddingVertical: 12,
   },
-  credentialTitle: { 
-    color: '#F5F5F5', 
-    fontSize: 16, 
-    fontWeight: '600' 
+  passwordRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
   },
-  credentialLogin: { 
-    color: '#A3A3A3', 
-    fontSize: 13, 
-    marginTop: 4 
+  actionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
   },
-  credentialPassword: { 
-    color: '#F5F5F5', 
-    fontFamily: 'monospace', 
+  actionDivider: {
+    width: 1,
+    height: 16,
+    backgroundColor: '#262626',
+  },
+  credentialTitle: {
+    color: '#F5F5F5',
+    fontSize: 15,
+    fontWeight: '600',
+    letterSpacing: -0.2,
+  },
+  credentialLogin: {
+    color: '#A3A3A3',
+    fontSize: 13,
+    marginTop: 2,
+  },
+  credentialPassword: {
+    color: '#F5F5F5',
+    fontFamily: 'monospace',
     fontSize: 14,
-    letterSpacing: 2
+    letterSpacing: 2,
   },
-  emptyCard: { 
-    borderWidth: 1, 
-    borderColor: '#262626', 
-    borderStyle: 'dashed', 
-    borderRadius: 16, 
-    padding: 40, 
-    alignItems: 'center', 
+  emptyCard: {
+    borderWidth: 1,
+    borderColor: '#262626',
+    borderStyle: 'dashed',
+    borderRadius: 16,
+    padding: 40,
+    alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#171717',
   },
-  emptyText: { 
-    color: '#A3A3A3', 
-    fontSize: 14, 
-    textAlign: 'center' 
-  }
+  actionContainer: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'center', // vertically align edit/delete icons with password line
+    alignSelf: 'center', // center container within credential card row
+    gap: 12,
+  },
+  emptyText: {
+    color: '#A3A3A3',
+    fontSize: 14,
+    textAlign: 'center',
+  },
 });
