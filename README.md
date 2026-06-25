@@ -95,8 +95,4 @@ eas build --platform android --profile production
 * Secure environment variable management
 * Native Android architecture using Kotlin and Gradle
 
----
 
-## 📄 License
-
-This project is available under the MIT License. Feel free to use, modify, and distribute it according to the license terms.
